@@ -18,7 +18,7 @@ int getBase64DecodedSize(char *str) {
     return static_cast<int>((strlen(str) - equalitySymbolCount) * 0.75);
 }
 
-void decodeAndPush(char *encodedString, char *array) {
+void decodeBase64(char *encodedString, char *array) {
     int encStrLen = strlen(encodedString);
     int i = 0;
     int in = 0;
@@ -58,16 +58,4 @@ void decodeAndPush(char *encodedString, char *array) {
 
         for (auto j = 0; j < i - 1; j++) array[arrayLastUsedIndex++] = charArray3[j];
     }
-}
-
-char *decodeBase64(char *encodedString) {
-    int decodedSize = getBase64DecodedSize(encodedString);
-    auto *ret = new char[decodedSize];
-
-    Serial.print("DECODED SIZE: ");
-    Serial.println(decodedSize);
-
-    decodeAndPush(encodedString, ret);
-
-    return ret;
 }

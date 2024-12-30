@@ -4,6 +4,6 @@
 #ifndef BASE64DECODER_H
 #define BASE64DECODER_H
 
-char *decodeBase64(char *encodedString);
+void decodeBase64(char *encodedString, char *arr);
 
 #endif //BASE64DECODER_H

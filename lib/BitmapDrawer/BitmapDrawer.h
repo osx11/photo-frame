@@ -8,7 +8,7 @@ extern "C" {
 }
 
 typedef struct {
-    char *arr; /* Input stream */
+    // char *arr;
     Adafruit_ST7735 *tft;
 } IODEV;
 
@@ -16,6 +16,6 @@ typedef struct {
 #ifndef BITMAPDRAWER_H
 #define BITMAPDRAWER_H
 
-void drawBitmap(Adafruit_ST7735 *tft, char *bitmap);
+void drawBitmap(Adafruit_ST7735 *tft, size_t (*inFunc)(JDEC *jd, uint8_t *buff, size_t nbyte));
 
 #endif //BITMAPDRAWER_H
