@@ -19,7 +19,6 @@ extern "C" {
 #include "user_interface.h"
 }
 
-#define FB_MODEL_ID = 4
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 160
 
@@ -297,21 +296,20 @@ void loop() {
     button.onSingleClick([] {
         digitalWrite(LED_PIN, HIGH);
 
-        buff = new char[1];
+        const auto models = fbApi.getModels();
 
-        auto headers = FixedSizeList<HttpHeader>(2);
+        if (models == nullptr) Serial.println("An error has occurred during model fetch");
+        else {
+            for (auto i = 0; i < models->size(); i++) {
+                const auto model = models->get(i);
+                if (model.type != "TEXT2IMAGE") continue;
+                Serial.println("Available T2I Model name: " + String(model.name) + " (id=" + String(model.id) + ")");
+            }
+        }
 
-        headers.append({.key="X-Key", .value="Key " + String(FB_API_KEY)});
-        headers.append({.key="X-Secret", .value="Secret " + String(FB_SECRET)});
-
-        fbApi.getModels();
-
-        delete buff;
+        delete models;
 
         digitalWrite(LED_PIN, LOW);
-        // FusionBrainModel fm = {1, "BB", "CC"};
-        // auto list = FixedSizeList<FusionBrainModel>(2);
-        // list.append(fm);
 
         // resetScreen();
 
