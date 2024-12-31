@@ -9,13 +9,19 @@
 #include <ButtonController.h>
 #include <Base64Decoder.h>
 #include <BitmapDrawer.h>
+#include <ESPAsyncWebServer.h>
 #include <WiFiManager.h>
+#include <HttpClient.h>
+#include <FixedSizeList.h>
+#include <FusionBrainApi.h>
 
 extern "C" {
 #include "user_interface.h"
 }
 
-#define N_BPP 2
+#define FB_MODEL_ID = 4
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 160
 
 #define WIFI_CONNECTION_TIMEOUT 60000
 
@@ -33,6 +39,8 @@ ButtonController button = ButtonController(BTN_PIN);
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
 WiFiManager wifiManager = WiFiManager(WIFI_SSID, WIFI_PASSWORD);
 WiFiClientSecure wifiClient = WiFiClientSecure();
+HttpClient httpClient = HttpClient(&wifiClient);
+FusionBrainApi fbApi = FusionBrainApi(&httpClient, FB_API, FB_API_KEY, FB_SECRET);
 
 boolean initSuccess = false;
 
@@ -55,7 +63,7 @@ void readBytes(size_t bytes, char *dest) {
 }
 
 void fillDecodedFull() {
-    char *tmp = new char[ENC_BUFF_SIZE+1];
+    char *tmp = new char[ENC_BUFF_SIZE + 1];
 
     readBytes(684, tmp);
     tmp[ENC_BUFF_SIZE] = '\0'; // otherwise strlen won't work as expected
@@ -151,22 +159,22 @@ void setup() {
 
     tft.write("Connecting to WiFi");
 
-    // wifiManager.setOnAttempCallback([] {
-    //     tft.write(".");
-    //     delay(500);
-    // });
-    //
-    // const auto status = wifiManager.tryAutoConnectAsStation(WIFI_CONNECTION_TIMEOUT);
-    //
-    // if (status != WL_CONNECTED) {
-    //     resetScreen();
-    //
-    //     tft.write("Connection failed \n");
-    //     tft.write("Code: ");
-    //     tft.write(WiFiManager::convertWifiStatus(status));
-    //
-    //     return;
-    // }
+    wifiManager.setOnAttempCallback([] {
+        tft.write(".");
+        delay(500);
+    });
+
+    const auto status = wifiManager.tryAutoConnectAsStation(WIFI_CONNECTION_TIMEOUT);
+
+    if (status != WL_CONNECTED) {
+        resetScreen();
+
+        tft.write("Connection failed \n");
+        tft.write("Code: ");
+        tft.write(WiFiManager::convertWifiStatus(status));
+
+        return;
+    }
 
     resetScreen();
     tft.setTextSize(2);
@@ -252,33 +260,67 @@ String getResponse() {
     return jsonResponse;
 }
 
-void loop() {
-    // if (!initSuccess) return;
+char *buff;
+
+void onResponse(WiFiClientSecure *wc) {
+    Serial.println(wc->readStringUntil('\n'));
+    // wc->readBytes(buff, 1);
     //
-    // wifiManager.checkRealWifiStatus();
+    // if (buff[0] == '[' || buff[0] == ']') {
+    //     while (buff[0] != '\n') {
+    //         Serial.print(buff[0]);
+    //         wifiClient.readBytes(buff, 1);
+    //     }
     //
-    // if (!wifiManager.isConnected()) {
-    //     resetScreen();
-    //
-    //     tft.write("WiFi connection lost.\n");
-    //     tft.write("Reboot to reconnect.");
-    //
-    //     initSuccess = false;
-    //
-    //     return;
+    //     Serial.println();
     // }
+}
+
+void loop() {
+    if (!initSuccess) return;
+
+    wifiManager.checkRealWifiStatus();
+
+    if (!wifiManager.isConnected()) {
+        resetScreen();
+
+        tft.write("WiFi connection lost.\n");
+        tft.write("Reboot to reconnect.");
+
+        initSuccess = false;
+
+        return;
+    }
 
     button.doTick();
 
     button.onSingleClick([] {
-        resetScreen();
+        digitalWrite(LED_PIN, HIGH);
 
-        Serial.println("Free RAM before: " + String(system_get_free_heap_size()));
-        delay(1000);
+        buff = new char[1];
 
-        decodeAndDrawJpg();
+        auto headers = FixedSizeList<HttpHeader>(2);
 
-        Serial.println("Free RAM after: " + String(system_get_free_heap_size()));
+        headers.append({.key="X-Key", .value="Key " + String(FB_API_KEY)});
+        headers.append({.key="X-Secret", .value="Secret " + String(FB_SECRET)});
+
+        fbApi.getModels();
+
+        delete buff;
+
+        digitalWrite(LED_PIN, LOW);
+        // FusionBrainModel fm = {1, "BB", "CC"};
+        // auto list = FixedSizeList<FusionBrainModel>(2);
+        // list.append(fm);
+
+        // resetScreen();
+
+        // Serial.println("Free RAM before: " + String(system_get_free_heap_size()));
+        // delay(1000);
+        //
+        // decodeAndDrawJpg();
+        //
+        // Serial.println("Free RAM after: " + String(system_get_free_heap_size()));
 
         // const auto jsonString = getResponse();
         //
