@@ -144,6 +144,32 @@ void resetScreen() {
     tft.setTextSize(1);
 }
 
+void readEEPROMAndPrint() {
+    Serial.println("Reading EEPROM...");
+
+    Settings readSettings{};
+    EEPROM.get(0, readSettings);
+
+    Serial.print("Username: ");
+    Serial.print(readSettings.wifiUser);
+    Serial.print(" Password: ");
+    Serial.println(readSettings.wifiPassword);
+}
+
+void writeEEPROM() {
+    Serial.println("Writing EEPROM...");
+
+    Settings settings{};
+
+    strcpy(settings.wifiUser, "osx11");
+    strcpy(settings.wifiPassword, "superpass");
+
+    EEPROM.put(0, settings);
+    EEPROM.commit();
+
+    Serial.println("EEPROM written");
+}
+
 void setup() {
     pinMode(BTN_PIN, INPUT_PULLUP);
     pinMode(LED_PIN, OUTPUT);
@@ -183,98 +209,6 @@ void setup() {
     wifiClient.setInsecure();
 }
 
-void readEEPROMAndPrint() {
-    Serial.println("Reading EEPROM...");
-
-    Settings readSettings{};
-    EEPROM.get(0, readSettings);
-
-    Serial.print("Username: ");
-    Serial.print(readSettings.wifiUser);
-    Serial.print(" Password: ");
-    Serial.println(readSettings.wifiPassword);
-}
-
-void writeEEPROM() {
-    Serial.println("Writing EEPROM...");
-
-    Settings settings{};
-
-    strcpy(settings.wifiUser, "osx11");
-    strcpy(settings.wifiPassword, "superpass");
-
-    EEPROM.put(0, settings);
-    EEPROM.commit();
-
-    Serial.println("EEPROM written");
-}
-
-String getResponse() {
-    Serial.println("Connecting");
-
-    const auto connected = wifiClient.connect(FB_API, 443);
-
-    if (!connected) {
-        Serial.println("Connection failed");
-        return "";
-    }
-
-    String request = "GET " + String("/key/api/v1/models") + " HTTP/1.1\r\n";
-
-    request += "Host: " + String(FB_API) + "\r\n";
-    request += "Connection: close\r\n";
-    request += "X-Key: Key " + String(FB_API_KEY) + "\r\n";
-    request += "X-Secret: Secret " + String(FB_SECRET) + "\r\n";
-    request += "\r\n";
-
-    wifiClient.print(request);
-
-    String jsonResponse = "";
-    const auto buff = new char[1];
-
-    // Read and print the response
-    Serial.println("---------------------------- Response ------------------------");
-    while (wifiClient.connected() || wifiClient.available()) {
-        if (wifiClient.available()) {
-            wifiClient.readBytes(buff, 1);
-
-            if (buff[0] == '[' || buff[0] == ']') {
-                while (buff[0] != '\n') {
-                    Serial.print(buff[0]);
-                    wifiClient.readBytes(buff, 1);
-                }
-
-                Serial.println();
-            }
-            // String line = wifiClient.readStringUntil('\n');
-            // if (line.startsWith("[")) jsonResponse = line;
-        }
-    }
-
-    Serial.println("-------------------------End Response--------------------------------");
-    wifiClient.stop();
-
-    free(buff);
-
-    return jsonResponse;
-}
-
-char *buff;
-
-void onResponse(WiFiClientSecure *wc) {
-    Serial.println(wc->readStringUntil('\n'));
-    // wc->readBytes(buff, 1);
-    //
-    // if (buff[0] == '[' || buff[0] == ']') {
-    //     while (buff[0] != '\n') {
-    //         Serial.print(buff[0]);
-    //         wifiClient.readBytes(buff, 1);
-    //     }
-    //
-    //     Serial.println();
-    // }
-}
-
 void loop() {
     if (!initSuccess) return;
 
@@ -294,44 +228,48 @@ void loop() {
     button.doTick();
 
     button.onSingleClick([] {
-        digitalWrite(LED_PIN, HIGH);
-
-        const auto models = fbApi.getModels();
-
-        if (models == nullptr) Serial.println("An error has occurred during model fetch");
-        else {
-            for (auto i = 0; i < models->size(); i++) {
-                const auto model = models->get(i);
-                if (model.type != "TEXT2IMAGE") continue;
-                Serial.println("Available T2I Model name: " + String(model.name) + " (id=" + String(model.id) + ")");
-            }
-        }
-
-        delete models;
-
-        digitalWrite(LED_PIN, LOW);
-
-        // resetScreen();
-
-        // Serial.println("Free RAM before: " + String(system_get_free_heap_size()));
-        // delay(1000);
-        //
-        // decodeAndDrawJpg();
-        //
-        // Serial.println("Free RAM after: " + String(system_get_free_heap_size()));
-
-        // const auto jsonString = getResponse();
-        //
-        // if (jsonString == "") {
-        //     return;
-        // }
-        //
-        // JsonDocument modelsDoc;
-        // deserializeJson(modelsDoc, jsonString);
-        //
-        // const auto model = modelsDoc[0];
-        // const char* name = model["name"];
-        //
-        // Serial.println(name);
+        decodeAndDrawJpg();
     });
+
+    // button.onSingleClick([] {
+    //     digitalWrite(LED_PIN, HIGH);
+    //
+    //     const auto models = fbApi.getModels();
+    //
+    //     if (models == nullptr) Serial.println("An error has occurred during model fetch");
+    //     else {
+    //         for (auto i = 0; i < models->size(); i++) {
+    //             const auto model = models->get(i);
+    //             if (model.type != "TEXT2IMAGE") continue;
+    //             Serial.println("Available T2I Model name: " + String(model.name) + " (id=" + String(model.id) + ")");
+    //         }
+    //     }
+    //
+    //     delete models;
+    //
+    //     digitalWrite(LED_PIN, LOW);
+    //
+    //     resetScreen();
+    //
+    //     Serial.println("Free RAM before: " + String(system_get_free_heap_size()));
+    //     delay(1000);
+    //
+    //     decodeAndDrawJpg();
+    //
+    //     Serial.println("Free RAM after: " + String(system_get_free_heap_size()));
+    //
+    //     const auto jsonString = getResponse();
+    //
+    //     if (jsonString == "") {
+    //         return;
+    //     }
+    //
+    //     JsonDocument modelsDoc;
+    //     deserializeJson(modelsDoc, jsonString);
+    //
+    //     const auto model = modelsDoc[0];
+    //     const char* name = model["name"];
+    //
+    //     Serial.println(name);
+    // });
 }
