@@ -41,7 +41,7 @@ int out_func(JDEC *jd, void *bitmap, JRECT *rect) {
 }
 
 
-void drawBitmap(Adafruit_ST7735 *tft, size_t (*inFunc)(JDEC *jd, uint8_t *buff, size_t nbyte)) {
+void drawBitmap(Adafruit_ST7796S *tft, size_t (*inFunc)(JDEC *jd, uint8_t *buff, size_t nbyte)) {
     // pos = 0;
     // totalRequested = 0;
 
@@ -59,7 +59,7 @@ void drawBitmap(Adafruit_ST7735 *tft, size_t (*inFunc)(JDEC *jd, uint8_t *buff, 
 
     if (res == JDR_OK) {
         // tft->fillScreen(ST77XX_BLACK);
-        res = jd_decomp(&jdec, out_func, 1);
+        res = jd_decomp(&jdec, out_func, 0);
 
         if (res != JDR_OK) {
             Serial.println("Failed to decomp (e=" + String(res) + ")");
